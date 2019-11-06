@@ -235,7 +235,6 @@ services:
 volumes:
   portainer_data:
   rabbit_data:
-  sparek_master_data:
   notebook_data:
   nifi_data:
   nifi_state:
