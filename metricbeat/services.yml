@@ -1,0 +1,60 @@
+metricbeat.config.modules:
+  path: ${path.config}/conf.d/*.yml
+  reload.period: 10s
+  reload.enabled: false
+
+metricbeat.max_start_delay: 10s
+
+tags: ["services"]
+
+#==========================  Modules configuration ============================
+metricbeat.modules:
+  - module: kafka
+    metricsets: ["consumergroup", "partition"]
+    period: 10s
+    hosts: ["kafka:9092"]
+    enabled: true
+#  - module: zookeeper
+#    enabled: true
+#    metricsets: ["mntr", "server"]
+#    period: 10s
+#    hosts: ["zookeeper:2181"]
+
+
+#================================ General ======================================
+
+name: services
+
+queue:
+  mem:
+    events: 4096
+    flush.min_events: 2048
+    flush.timeout: 1s
+
+#================================ Outputs ======================================
+
+# Configure what output to use when sending the data collected by the beat.
+
+output.elasticsearch:
+  hosts: ["elasticsearch:9200"]
+  index: "metricbeat-services-%{[beat.version]}-%{+yyyy.MM.dd}"
+  compression_level: 3
+
+setup.template.settings:
+
+  index.number_of_shards: 1
+  index.number_of_replicas: 1
+
+setup.template.name: "metricbeat-services"
+setup.template.pattern: "metricbeat-services-*"
+
+#================================ Logging ======================================
+logging.to_files: false
+
+setup.kibana.host: "kibana:5601"
+setup.kibana.protocol: "http"
+setup.dashboards.enabled: true
+setup.dashboards.retry.enabled: true
+
+xpack.monitoring.enabled: true
+

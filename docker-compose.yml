@@ -1,0 +1,263 @@
+version: "3.7"
+
+services:
+
+  elasticsearch:
+    image: elastic/elasticsearch:7.4.2
+    environment:
+      - "xpack.license.self_generated.type=basic"
+      - "cluster.name=atk-es-cluster"
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - "xpack.security.enabled=false"
+      - "http.host=0.0.0.0"
+      - "network.host=_eth0:ipv4_"
+      - "discovery.type=single-node"
+      - "xpack.monitoring.collection.enabled=true"
+    ports:
+      - "9200:9200"
+    networks:
+      - data-pipeline
+    hostname: "node-{{.Task.Slot}}"
+
+  kibana:
+    image: elastic/kibana:7.4.2
+    ports:
+      - "5601:5601"
+    networks:
+      - data-pipeline
+
+  metricbeat-host:
+    image: elastic/metricbeat:7.4.2
+    command: metricbeat -e -c /metricbeat/metricbeat-host.yml -system.hostfs=/hostfs
+    user:
+      root
+    environment:
+      - "ELASTICSEARCH_URL=http://elasticsearch:9200"
+      - "xpack.monitoring.enabled=true"
+    volumes:
+      - /proc:/hostfs/proc:ro
+      - /:/hostfs:ro
+      - /sys/fs/cgroup:/hostfs/sys/fs/cgroup:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+    configs:
+      - source: metricbeat.yml
+        target: /metricbeat/metricbeat-host.yml
+    networks:
+      - data-pipeline
+    deploy:
+      mode: global
+    hostname: "telemetry-{{.Node.Hostname}}"
+
+  metricbeat-services:
+    image: elastic/metricbeat:7.4.2
+    command: metricbeat -e -c /metricbeat/metricbeat-host.yml
+    environment:
+      - "ELASTICSEARCH_URL=http://elasticsearch:9200"
+      - "xpack.monitoring.enabled=true"
+    configs:
+      - source: metricbeat-services.yml
+        target: /metricbeat/metricbeat-host.yml
+    networks:
+      - data-pipeline
+    hostname: "telemetry-{{.Node.Hostname}}"
+
+  grafana:
+    image: grafana/grafana
+    ports:
+      - "3000:3000"
+    networks:
+      - data-pipeline
+    configs:
+      - source: datasources
+        target: /etc/grafana/provisioning/datasources/grafana-datasources.yaml
+      - source: dashboards
+        target: /etc/grafana/provisioning/dashboards/dashboard.yaml
+      - source: metricbeat
+        target: /var/lib/grafana/dashboards/metricbeat.json
+
+  zookeeper:
+    image: wurstmeister/zookeeper
+    ports:
+      - "2181:2181"
+    networks:
+      - data-pipeline
+
+  kafka:
+    image: wurstmeister/kafka:latest
+    environment:
+      HOSTNAME_COMMAND: "echo 'kafka'"
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INSIDE:PLAINTEXT,OUTSIDE:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: INSIDE://:9092,OUTSIDE://_{HOSTNAME_COMMAND}:9094
+      KAFKA_LISTENERS: INSIDE://:9092,OUTSIDE://:9094
+      KAFKA_INTER_BROKER_LISTENER_NAME: INSIDE
+      KAFKA_CREATE_TOPICS: messages:1:1
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - data-pipeline
+
+  jobmanager:
+    image: flink:1.9.1-scala_2.12
+    ports:
+      - 8081:8081
+    command: jobmanager
+    environment:
+      - JOB_MANAGER_RPC_ADDRESS=jobmanager
+    networks:
+      - data-pipeline
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '0.5'
+        reservations:
+          cpus: '0.5'
+
+  taskmanager:
+    image: flink:1.9.1-scala_2.12
+    command: taskmanager
+    environment:
+      - JOB_MANAGER_RPC_ADDRESS=jobmanager
+    networks:
+      - data-pipeline
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '0.5'
+        reservations:
+          cpus: '0.5'
+
+  spark-master:
+    image: bde2020/spark-master:2.4.4-hadoop2.7
+    ports:
+      - "8060:8080"
+      - "7077:7077"
+    networks:
+      - data-pipeline
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '0.5'
+        reservations:
+          cpus: '0.5'
+
+  spark-worker:
+    image: bde2020/spark-worker:2.4.4-hadoop2.7
+    ports:
+      - "8061:8081"
+    environment:
+      - "SPARK_MASTER=spark://spark-master:7077"
+      - "spark.driver.bindAddress=0.0.0.0"
+      - "spark.ui.reverseProxy=true"
+    networks:
+      - data-pipeline
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '0.5'
+        reservations:
+          cpus: '0.5'
+
+  rabbit:
+    build: ./rabbitmq
+    image: dockerbirmingham/rabbitmq:3.8.0-management-alpine
+    ports:
+      - 15672:15672
+    networks:
+      - data-pipeline
+    volumes:
+      - rabbit_data:/var/lib/rabbitmq
+
+  nifi:
+    image: apache/nifi:1.9.2
+    ports:
+      - 8077:8080
+    environment:
+      - NIFI_WEB_HTTP_HOST=0.0.0.0
+      - NIFI_ZK_CONNECT_STRING=zookeeper:2181
+    networks:
+      - data-pipeline
+    volumes:
+      - nifi_state:/opt/nifi/nifi-current/state
+      - nifi_db:/opt/nifi/nifi-current/database_repository
+      - nifi_flowfile:/opt/nifi/nifi-current/flowfile_repository
+      - nifi_content:/opt/nifi/nifi-current/content_repository
+      - nifi_provenance:/opt/nifi/nifi-current/provenance_repository
+
+  notebook:
+    image: jupyter/all-spark-notebook:1386e2046833
+    environment:
+      - "JUPYTER_ENABLE_LAB=yes"
+      - "SPARK_OPTS=--master=spark://spark-master:7077"
+      - "PYSPARK_PYTHON=python3"
+    ports:
+      - 8888:8888
+      - 4040:4040
+    command: start-notebook.sh --NotebookApp.token=''
+    volumes:
+      - notebook_data:/home/jovyan/work
+    networks:
+      - data-pipeline
+
+  agent:
+    image: portainer/agent:1.5.1
+    environment:
+      AGENT_CLUSTER_ADDR: tasks.agent
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /var/lib/docker/volumes:/var/lib/docker/volumes
+    networks:
+      - portainer
+    deploy:
+      mode: global
+      placement:
+        constraints: [node.platform.os == linux]
+
+  portainer:
+    image: portainer/portainer:1.22.1
+    command: -H tcp://tasks.agent:9001 --tlsskipverify
+    ports:
+      - "9000:9000"
+    volumes:
+      - portainer_data:/data
+    networks:
+      - portainer
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints: [node.role == manager]
+
+volumes:
+  portainer_data:
+  rabbit_data:
+  sparek_master_data:
+  notebook_data:
+  nifi_data:
+  nifi_state:
+  nifi_db:
+  nifi_flowfile:
+  nifi_content:
+  nifi_provenance:
+
+networks:
+  data-pipeline:
+  portainer:
+
+configs:
+  metricbeat.yml:
+    external: true
+  metricbeat-services.yml:
+    external: true
+  logstash.conf:
+    external: true
+  datasources:
+    external: true
+  dashboards:
+    external: true
+  metricbeat:
+    external: true

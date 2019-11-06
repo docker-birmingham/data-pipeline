@@ -1,0 +1,42 @@
+# config file version
+apiVersion: 1
+
+deleteDatasources:
+
+# list of datasources to insert/update depending
+# whats available in the database
+datasources:
+- name: Metricbeat
+  type: elasticsearch
+  access: proxy
+  orgId: 1
+  url: http://elasticsearch:9200
+  database: "[metricbeat-]*-YYYY.MM.DD"
+  basicAuth: false
+  withCredentials: false
+  isDefault: true
+  jsonData:
+   timeField: "@timestamp"
+   interval: "Daily"
+   esVersion: 5.6
+   timeInterval: "10s"
+  version: 1
+  editable: true
+
+- name: Logstash
+  type: elasticsearch
+  access: proxy
+  orgId: 1
+  url: http://elasticsearch:9200
+  database: "[logstash-]YYYY.MM.DD"
+  basicAuth: false
+  withCredentials: false
+  isDefault: false
+  jsonData:
+   timeField: "@timestamp"
+   interval: "Daily"
+   esVersion: 5.6
+   timeInterval: "1s"
+  version: 1
+  editable: true
+  

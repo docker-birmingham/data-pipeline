@@ -1,0 +1,62 @@
+{
+  "container": {
+    "labels": {
+      "org_label-schema_url": "https://www.elastic.co/products/beats/metricbeat",
+      "com_docker_swarm_task": "",
+      "com_docker_swarm_task_id": "p42jr5il6bcpgb1m1d0peb8lx",
+      "org_label-schema_version": "6.7.0",
+      "com_docker_swarm_service_name": "streams_metricbeat-host",
+      "com_docker_swarm_service_id": "mehelhrcl89fdj9fnm1b41aqz",
+      "com_docker_swarm_node_id": "pha4bg0xfflwk3h90npizzjzc",
+      "org_label-schema_vendor": "Elastic",
+      "com_docker_stack_namespace": "streams",
+      "com_docker_swarm_task_name": "streams_metricbeat-host.pha4bg0xfflwk3h90npizzjzc.p42jr5il6bcpgb1m1d0peb8lx",
+      "org_label-schema_vcs-ref": "14ca49c28a6e10b84b4ea8cdebdc46bd2eab3130",
+      "org_label-schema_schema-version": "1.0",
+      "license": "Elastic License",
+      "org_label-schema_name": "metricbeat",
+      "description": "Metricbeat is a lightweight shipper for metrics.",
+      "org_label-schema_license": "GPLv2",
+      "org_label-schema_build-date": "20190305",
+      "org_label-schema_vcs-url": "github.com/elastic/beats"
+    },
+    "id": "8b1acef3629d7673b0e991f1fc2ed4581c9f6ba485a6d2ce96e96a2fa94bea3c",
+    "name": "streams_metricbeat-host.pha4bg0xfflwk3h90npizzjzc.p42jr5il6bcpgb1m1d0peb8lx",
+    "image": "elastic/metricbeat:6.7.0@sha256:42b0389864eb05c048b85b67f98d3010ae8fbd3e928ec3f51106de31bcb5d8f3"
+  },
+  "cpu": {
+    "core": {
+      "2": {
+        "pct": 0.002052991959798995,
+        "ticks": 5192549196
+      },
+      "3": {
+        "ticks": 5235263968,
+        "pct": 8.021959798994975E-4
+      },
+      "0": {
+        "pct": 0.0050128663316582915,
+        "ticks": 5531451586
+      },
+      "1": {
+        "pct": 5.148221105527638E-4,
+        "ticks": 5369103312
+      }
+    },
+    "total": {
+      "pct": 0.008382876381909548
+    },
+    "kernel": {
+      "ticks": 8940000000,
+      "pct": 0
+    },
+    "user": {
+      "ticks": 8900000000,
+      "pct": 0.010050251256281407
+    },
+    "system": {
+      "ticks": 603396490000000,
+      "pct": 4
+    }
+  }
+}
