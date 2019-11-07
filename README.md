@@ -15,6 +15,7 @@ More info about CNAB features can be found [here](https://cnab.io/).
 
 To install and run the application only:
 
+`sh < create-configs.sh`
 `docker app install dockerbirmingham/data-pipeline`
 
 This will install the latest version of the application pointed to by the latest tag.  It may take some time to download 
@@ -70,5 +71,5 @@ rabbit_data
 
 To tear this all down use:
 
-`docker app install dockerbirmingham/data-pipeline`
-
+`docker app uninstall data-pipeline`
+`sh < delete-configs.sh`
